@@ -1,0 +1,119 @@
+Steganography in contemporary cyberattacks 
+By Alexey Shulmin, Evgeniya Krylova on August 3, 2017. 9:00 am
+Steganography is the practice of sending data in a concealed format so the very fact of sending the data is disguised. The word steganography is a combination of the Greek words στεγανός (steganos), meaning “covered, concealed, or protected”, and γράφειν (graphein) meaning “writing”.
+
+Unlike cryptography, which conceals the contents of a secret message, steganography conceals the very fact that a message is communicated. The concept of steganography was first introduced in 1499, but the idea itself has existed since ancient times. There are stories of a method being used in the Roman Empire whereby a slave chosen to convey a secret message had his scalp shaved clean and a message was tattooed onto the skin. When the messenger’s hair grew back, he was dispatched on his mission. The receiver shaved the messenger’s scalp again and read the message. 
+
+ 
+ 
+In this article, the following definitions are used:
+ 
+Payload: the information to be concealed and sent secretly, or the data covertly communicated; 
+Carrier (stego-container): any object where the payload is secretly embedded;
+Stego-system: the methods and means used to create a concealed channel for communicating information; 
+Channel: the data communication channel via which the carrier is transferred;
+Key: the key used to extract the payload from the carrier (not always applied).
+Steganography was actively developed throughout the 20th century, as was steganalysis, or the practice of determining the fact that concealed information is being communicated within a carrier. (Basically, steganalysis is the practice of attacking stego-systems.) Today, however, a dangerous new trend is emerging: steganography is increasingly being used by actors creating malware and cyber-espionage tools. Most modern anti-malware solutions provide little, if any, protection from steganography, while any carrier in which a payload can be secretly carried poses a potential threat. It may contain data being exfiltrated by spyware, communication between a malicious program and its C&C, or new malware. 
+
+A variety of steganographic methods and algorithms have been scientifically developed and tested. A description of some of them is provided below. 
+ 
+In LSB steganography, the payload is encoded into and communicated in one or several least significant bits of the carrier. The smaller the number of bits used to carry the payload, the lower the impact on the original carrier signal. 
+Discrete cosine transform or DCT-based steganography is a sub-type of LSB steganography that is often applied on JPEG-format carriers (i.e., when JPEG images are used to carry the payload). In this method, the communicated data is secretly encoded into the DCT coefficients. With all other factors being equal, this method provides a somewhat lower data carrying capacity; one of the reasons for this is that the coefficient values of 0 and 1 cannot be altered, so no data can be encoded whenever the coefficients take on these values.
+Palette-based image steganography is basically another sub-type of LSB steganography, in which the communicated data is encoded into least significant bits of the image palette rather than into those of the carrier. The obvious downside to this method is its low data carrying capacity. 
+Use of service fields in data formats. This is a relatively simple method, in which the payload is embedded into the service fields of the carrier’s headers. The downsides are, again, a low data carrying capacity and low payload protection: the embedded payload may be detected using regular image viewing software that can sometimes display the contents of the service fields.
+Payload embedding is a method whereby the payload is encoded into the carrier and, upon delivery, is decoded using an algorithm known to both parties. Several payloads can be independently encoded into the same carrier provided that their embedding methods are orthogonal.
+Wideband methods fall into the following types:
+Pseudorandom sequence method, in which a secret carrier signal is modulated by a pseudorandom signal. 
+Frequency hopping method, in which the frequency of the carrier signal changes according to a specific pseudorandom law.
+Overlay method – strictly speaking, this is not proper steganography, and is based on the fact that some data formats contain data size in a header, or the fact that the handler of such formats reads the file till it reaches the end-of-data marker. An example is the well-known RAR/JPEG method based on concatenating an image file, so that it is composed of a JPEG format section, followed by a RAR archive section. A JPEG viewer software program will read it till the boundary specified in the file’s header, while a RAR archiver tool will disregard everything prior to the RAR! signature that denotes the beginning of an archive. Therefore, if such a file is opened in an image file viewer, it will display the image, and if it is opened in a RAR archiver, it will display the contents of the RAR archive. The downside to this method is that the overlay added to the carrier segment can be easily identified by an analyst visually reviewing the file.
+In this article, we will only review methods of concealing information in image-type carriers and in network communication. The application of steganography is, however, much wider than these two areas. 
+
+Recently, we have seen steganography used in the following malware programs and cyberespionage tools: 
+
+Microcin (AKA six little monkeys);
+NetTraveler;
+Zberp; 
+Enfal (its new loader called Zero.T);
+Shamoon;
+KinS;
+ZeusVM;
+Triton (Fibbit).
+So why are malware authors increasingly using steganography in their creations? We see three main reasons for this:
+
+It helps them conceal not just the data itself but the fact that data is being uploaded and downloaded;
+It helps bypass DPI systems, which is relevant for corporate systems;
+Use of steganography may help bypass security checks by anti-APT products, as the latter cannot process all image files (corporate networks contain too many of them, and the analysis algorithms are rather expensive).
+For the end user, detecting a payload within a carrier may be a non-trivial task. As an example, let’s review the two images below. One is an empty carrier, and the other is a carrier with a payload. We will use the standard test image Lenna.
+
+	
+Lenna.bmp	Lenna_stego.bmp
+Both images are 786 486 bytes; however, the right-hand image contains the first 10 chapters of Nabokov’s novel Lolita.
+
+Take a good look at these two images. Can you see any difference? They are identical in both size and appearance. However, one of them is a carrier containing an embedded message.
+
+The problems are obvious:
+
+Steganography is now very popular with malware and spyware writers;
+Anti-malware tools generally, and perimeter security tools specifically, can do very little with payload-filled carriers. Such carriers are very difficult to detect, as they look like regular image files (or other types of files);
+All steganography detection programs today are essentially proof-of-concept, and their logic cannot be implemented in commercial security tools because they are slow, have fairly low detection rates, and sometimes even contain errors in the math (we have seen some instances where this was the case).
+A list was provided above (though it does not claim to be complete) of malicious programs that use steganography to conceal their communication. Let’s review one specific case from that list, the malicious loader Zero.T.
+
+We detected this loader in late 2016, though our colleagues from Proofpoint were first to publish a description.
+
+We named it Zero.T because of this string in its executable code (in the path leading to the project’s PBD file):
+
+
+
+We will not dwell here on how the malicious loader penetrates the victim system and remains there, but will note that it loads a payload in the form of Bitmap files:
+
+
+
+Then it processes them in a particular way to obtain malicious modules:
+
+
+
+On the face of it, these three BMP files appear to be images:
+
+		
+However, they are more than just regular images; they are payload-filled carriers. In each of them, several (the algorithm allows for variability) least significant bits are replaced by the payload.
+
+So, is there a way to determine whether an image is carrying a malicious payload or not? Yes, there are several ways of doing so, the simplest being a visual attack. It is based on forming new images from the source image, containing the least significant bits of different color planes.
+
+Let’s see how this works using the Steve Jobs photo as a sample image.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
