@@ -92,7 +92,7 @@ class PSNR():
 
         self.MAXi = 255 # maximum posible channel value of the image = 2^8-1
     def MSE(self): # calculate MSE = 1/size * sum((I(i,j)-K(i,j))^2) with i = 1..n;j = 1..m
-        res = 1
+        res = 0
         if self.oheight != self.cheight: raise PSNRException("2 images not at same size")
         if self.owidth != self.cwidth: raise PSNRException("2 images not at same size")
         if self.ochannel != self.cchannel: raise PSNRException("2 images not at same size")
@@ -100,8 +100,8 @@ class PSNR():
         for curheight in range(self.oheight):
             for curwidth in range(self.owidth):
                 for curchan in range(self.ochannel):
-                    I = self.origin[curheight,curwidth][curchan]
-                    K = self.changed[curheight,curwidth][curchan]
+                    I = int(self.origin[curheight,curwidth][curchan])
+                    K = int(self.changed[curheight,curwidth][curchan])
                     res += (I-K)*(I-K)
 
         res *= 1/self.osize
@@ -140,16 +140,22 @@ elif args.option == "unhide":
     print("Unhiding process complete !!!\nYou can see result in test_out.txt")
 elif args.option == "analysis":
     data = open(args.in_file,"r",encoding= "UTF-8").read()
-    words = data.split()
-    if len(words) < 50: raise AnalysisException("Your input has less than 50 words !!!")
+    if len(data) < 50: raise AnalysisException("Your input has less than 50 symbols !!!")
     input = ""
     PSNRs = []
-    numWords = [i+1 for i in range(50)]
-    for i in range(50):
-        input += words[i]
-        changed_img = steg.hide_text(input)
+    numWords = []
+    for i in range(len(data)):
+        input += data[i] # append 1 symbols to input
+
+        stega = LSBSteg(in_img) # init LSB changing method
+
+        changed_img = stega.hide_text(input) # get value of changed image
+        in_img = cv2.imread(args.in_img) # refresh value in variable "in_img" (value of orginal img)
+
         res = PSNR(in_img,changed_img)
+
         PSNRs.append(res.getVal())
+        numWords.append(i)
     # print("Analysis complete !!!")
     # print(PSNRs)
     import matplotlib.pyplot as plt
