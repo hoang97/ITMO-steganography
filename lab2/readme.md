@@ -33,6 +33,10 @@ optional arguments:
  - to get graphic analysis image (testin.bmp) with message (in_text.txt)
  
    py LSB.py analysis -i in_text.txt -ii testin.bmp
+ 
+ - to do simple attack on steg-container (testout.bmp)
+ 
+   py LSB.py detection -ii testin.bmp -o testout.bmp
    
  NOTE:
  
