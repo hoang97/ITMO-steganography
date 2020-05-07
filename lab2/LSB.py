@@ -40,7 +40,7 @@ class LSBSteg():
             if self.curwidth == self.mwidth - 1:
                 self.curwidth = 0
                 if self.curheight == self.mheight - 1:
-                    raise SteganoException("No available slot (image filled")
+                    raise SteganoException("Can't hide/unhide image !!!!")
                 else: self.curheight += 1
             else: self.curwidth += 1
         else: self.curchan += 1
@@ -56,7 +56,7 @@ class LSBSteg():
 
     def read_bits(self,bitsize): # read a fixed (bitsize) bits in the image
         res = ""
-        for i in range(bitsize):
+        for _ in range(bitsize):
             res += self.read_bit()
         return res
 
@@ -72,14 +72,14 @@ class LSBSteg():
         binl = self.read_bits(16) # get the length of text in binary format
         l = int(binl,2) # length of text in integer format
         text = ""
-        for i in range(l):
+        for _ in range(l):
             tmp = self.read_bits(8) # read 8 bits = 1 char
             text += chr(int(tmp,2))
         return text
 
 class PSNRException(Exception):
     pass
-class PSNR():
+class Analysis():
     def __init__(self,originImg,Img):
         self.origin = originImg
         self.changed = Img
@@ -91,6 +91,8 @@ class PSNR():
         self.csize = self.cheight * self.cwidth * self.ochannel
 
         self.MAXi = 255 # maximum posible channel value of the image = 2^8-1
+        self.maskONE = 0b00000001 # use bitwise OR to make LSB 1
+
     def MSE(self): # calculate MSE = 1/size * sum((I(i,j)-K(i,j))^2) with i = 1..n;j = 1..m
         res = 0
         if self.oheight != self.cheight: raise PSNRException("2 images not at same size")
@@ -106,10 +108,20 @@ class PSNR():
 
         res *= 1/self.osize
         return res
-    def getVal(self): # calculate PSNR = 10*log10(MAXi^2/MSE)
+    def PSNR(self): # calculate PSNR = 10*log10(MAXi^2/MSE)
         res = self.MAXi*self.MAXi/self.MSE() 
         res = 10 * np.log(res) / np.log(10)
         return res
+    def Detec(self):
+        for curheight in range(self.oheight):
+            for curwidth in range(self.owidth):
+                for curchan in range(self.ochannel):
+                    I = int(self.origin[curheight,curwidth][curchan])
+                    K = int(self.changed[curheight,curwidth][curchan]) 
+                    self.origin[curheight,curwidth][curchan] = (I & self.maskONE) * 255
+                    self.changed[curheight,curwidth][curchan] = (K & self.maskONE) * 255
+        cv2.imwrite('tmp1.bmp',self.origin)
+        cv2.imwrite('tmp2.bmp',self.changed)
 
 class AnalysisException(Exception):
     pass
@@ -137,24 +149,24 @@ elif args.option == "unhide":
     out_file = args.out_file
     with open(out_file,'w',encoding= "UTF-8") as f:
         f.write(res)
-    print("Unhiding process complete !!!\nYou can see result in test_out.txt")
+    print("Unhiding process complete !!!\nYou can see result in out_text.txt")
 elif args.option == "analysis":
     data = open(args.in_file,"r",encoding= "UTF-8").read()
     if len(data) < 50: raise AnalysisException("Your input has less than 50 symbols !!!")
     input = ""
     PSNRs = []
     numWords = []
-    for i in range(len(data)):
-        input += data[i] # append 1 symbols to input
+    for i in range(0,len(data),5):
+        input += data[i:i+5] # append 1 symbols to input
 
         stega = LSBSteg(in_img) # init LSB changing method
 
         changed_img = stega.hide_text(input) # get value of changed image
         in_img = cv2.imread(args.in_img) # refresh value in variable "in_img" (value of orginal img)
 
-        res = PSNR(in_img,changed_img)
+        res = Analysis(in_img,changed_img)
 
-        PSNRs.append(res.getVal())
+        PSNRs.append(res.PSNR())
         numWords.append(i)
     # print("Analysis complete !!!")
     # print(PSNRs)
@@ -164,4 +176,8 @@ elif args.option == "analysis":
     plt.ylabel("PSNR value in Db")
     plt.title("Graphic PSNR with Number of words ratio")
     plt.show()
-    
+elif args.option == "detection":
+    in_img = cv2.imread(args.in_img)
+    changed_img = cv2.imread(args.out_file)
+    res = Analysis(in_img,changed_img)
+    res.Detec()
